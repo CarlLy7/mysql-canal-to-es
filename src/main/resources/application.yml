@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: canal-to-es
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    url: jdbc:mysql://localhost:3306/canal_test?characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true
+
+  elasticsearch:
+    uris: http://localhost:9200
+    username: root
