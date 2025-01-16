@@ -1,13 +1,16 @@
 package com.carl.canaltoes.config;
 
 
-import org.elasticsearch.client.RestHighLevelClient;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.client.ClientConfiguration;
-import org.springframework.data.elasticsearch.client.RestClients;
-import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 import org.springframework.stereotype.Component;
+
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.rest_client.RestClientTransport;
 
 /**
  * @author: carl
@@ -15,12 +18,19 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Configuration
-public class ElasticsearchConfig extends AbstractElasticsearchConfiguration {
+public class ElasticsearchConfig{
 
-    @Override
-    @Bean
-    public RestHighLevelClient elasticsearchClient() {
-        ClientConfiguration clientConfiguration = ClientConfiguration.builder().connectedTo("localhost:9200").build();
-        return RestClients.create(clientConfiguration).rest();
+
+    @Bean("myElasticsearchClient")
+    public ElasticsearchClient myElasticsearchClient(){
+        RestClient httpClient = RestClient.builder(
+                new HttpHost("localhost", 9200)
+        ).build();
+        ElasticsearchTransport transport = new RestClientTransport(
+                httpClient,
+                new JacksonJsonpMapper()
+        );
+
+        return new ElasticsearchClient(transport);
     }
 }

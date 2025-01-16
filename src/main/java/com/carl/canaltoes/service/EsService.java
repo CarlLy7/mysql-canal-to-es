@@ -1,20 +1,19 @@
 package com.carl.canaltoes.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import javax.annotation.Resource;
 
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
-import org.elasticsearch.index.reindex.DeleteByQueryRequest;
-import org.elasticsearch.xcontent.XContentType;
 import org.springframework.stereotype.Service;
 
 import com.alibaba.otter.canal.protocol.CanalEntry;
+import com.carl.canaltoes.domain.User;
+
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.*;
 
 /**
  * @author: carl
@@ -23,57 +22,55 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 @Service
 public class EsService {
     @Resource
-    private RestHighLevelClient elasticsearchClient;
+    private ElasticsearchClient myElasticsearchClient;
 
-    public void saveToIndex(List<CanalEntry.Column> columns){
-        StringBuilder sb=new StringBuilder();
-        sb.append("{");
+    public void saveToIndex(List<CanalEntry.Column> columns) {
+
+        JSONObject jsonObject = new JSONObject();
         for (CanalEntry.Column column : columns) {
-            sb.append("\"").append(column.getName()).append("\":\"").append(column.getValue()).append("\",");
+            jsonObject.put(column.getName(), column.getValue());
         }
-        sb.deleteCharAt(sb.length()-1);
-        sb.append("}");
-        IndexRequest indexRequest = new IndexRequest("user")
-                .source(sb.toString(),  XContentType.JSON);
-
         try {
-            elasticsearchClient.index(indexRequest,  RequestOptions.DEFAULT);
+            User user = JSONUtil.toBean(jsonObject, User.class);
+            IndexRequest.Builder<Object> builder = new IndexRequest.Builder<>();
+            builder.index("user").id(user.getId()).document(user);
+            IndexResponse response = myElasticsearchClient.index(builder.build());
+            System.out.println(response.toString());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void updateToIndex(List<CanalEntry.Column> columns) {
+        JSONObject jsonObject = new JSONObject();
+        for (CanalEntry.Column column : columns) {
+            jsonObject.put(column.getName(), column.getValue());
+        }
+        try {
+            User user = JSONUtil.toBean(jsonObject, User.class);
+            UpdateRequest.Builder builder = new UpdateRequest.Builder<>();
+            builder.index("user").id(user.getId()).doc(user);
+            UpdateResponse response = myElasticsearchClient.update(builder.build(), User.class);
+            System.out.println(response.toString());
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void updateToIndex(List<CanalEntry.Column> columns){
-        StringBuilder sb=new StringBuilder();
-        sb.append("{");
+    public void deleteToIndex(List<CanalEntry.Column> columns) {
+        JSONObject jsonObject = new JSONObject();
         for (CanalEntry.Column column : columns) {
-            sb.append("\"").append(column.getName()).append("\":\"").append(column.getValue()).append("\",");
+            jsonObject.put(column.getName(), column.getValue());
         }
-        sb.deleteCharAt(sb.length()-1);
-        sb.append("}");
-
         try {
-            UpdateRequest updateRequest = new UpdateRequest();
-            updateRequest.index("user");
-            updateRequest.doc(sb.toString(),XContentType.JSON);
-            elasticsearchClient.update(updateRequest,RequestOptions.DEFAULT);
+            User user = JSONUtil.toBean(jsonObject, User.class);
+            DeleteRequest.Builder builder = new DeleteRequest.Builder();
+            builder.index("user").id(user.getId());
+            DeleteResponse response = myElasticsearchClient.delete(builder.build());
+            System.out.println(response.toString());
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-
-    public void deleteToIndex(List<CanalEntry.Column> columns){
-        for (CanalEntry.Column column : columns) {
-            try{
-                DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest("user");
-                deleteByQueryRequest.setQuery(QueryBuilders.matchQuery(column.getName(),column.getValue()));
-                BulkByScrollResponse deleteResult = elasticsearchClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
-                long deletedDocs = deleteResult.getDeleted();
-                System.out.println("Deleted  " + deletedDocs + " documents.");
-            }catch (Exception e){
-                e.printStackTrace();
-            }
         }
     }
 }

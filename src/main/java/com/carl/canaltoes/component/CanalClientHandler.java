@@ -6,6 +6,7 @@ import com.alibaba.otter.canal.protocol.CanalEntry;
 import com.alibaba.otter.canal.protocol.Message;
 import com.carl.canaltoes.service.EsService;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -23,6 +24,7 @@ public class CanalClientHandler implements InitializingBean {
     private EsService esService;
 
     @Override
+    @Bean
     public void afterPropertiesSet() throws Exception {
         // 创建链接
         CanalConnector connector =
